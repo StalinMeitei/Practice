@@ -1,0 +1,13 @@
+MIME-Version: 1.0
+Content-Type: application/pkcs7-mime; name="smime.p7m"; smime-type="enveloped-data"
+Content-Disposition: attachment; filename="smime.p7m"
+Content-Transfer-Encoding: binary
+AS2-Version: 1.2
+ediint-features: CMS
+Message-ID: <176896959459.47584.16782442193224552228@That>
+AS2-From: p1as2
+AS2-To: p2as2
+Subject: EDI Message sent using pyas2
+Date: Wed, 21 Jan 2026 09:56:35 +0530
+disposition-notification-to: no-reply@pyas2.com
+disposition-notification-options: signed-receipt-protocol=required, pkcs7-signature; signed-receipt-micalg=optional, sha256
