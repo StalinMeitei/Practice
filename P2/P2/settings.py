@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-eqzka9+m#o5&kji+zpotyf@8912908+otvx-7mu^o@2a%^dqe&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -73,12 +74,30 @@ WSGI_APPLICATION = 'P2.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'p2_as2_db.sqlite3',
+import os
+
+# Database configuration - supports both PostgreSQL and SQLite
+DB_ENGINE = os.environ.get('DB_ENGINE', 'sqlite')
+
+if DB_ENGINE == 'postgres' or os.environ.get('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'p2_as2_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'CONN_MAX_AGE': 600,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'p2_as2_db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -115,7 +134,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/p2/static/' if os.environ.get('USE_P2_PREFIX') else '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -126,7 +146,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PYAS2 = {
     'DATA_DIR': BASE_DIR / 'data',
     'MAX_RETRIES': 5,
-    'MDN_URL': 'http://127.0.0.1:8001/pyas2/as2receive',
+    'MDN_URL': os.environ.get('P2_MDN_URL', 'http://127.0.0.1:8001/pyas2/as2receive'),
     'ASYNC_MDN_WAIT': 30,
     'MAX_ARCH_DAYS': 30,
 }
+
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost,http://127.0.0.1').split(',')

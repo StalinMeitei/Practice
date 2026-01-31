@@ -2,6 +2,26 @@
 
 This implements both P1 and P2 parts of the django-pyas2 quickstart guide using pgEdge/PostgreSQL databases. P1 and P2 are AS2 servers that can send and receive AS2 messages between each other.
 
+## 🚨 Important: Private Key Upload
+
+If you're getting "Invalid Private Key" errors when uploading keys in Django admin:
+
+**→ See: [PRIVATE_KEY_FIX_SUMMARY.md](PRIVATE_KEY_FIX_SUMMARY.md)** ← Start here!
+
+**Quick fix**: Leave the "Private Key Password" field **EMPTY** when uploading keys.
+
+**Visual guide**: Run `.\show-key-upload-guide.ps1`
+
+## 📚 Documentation Quick Links
+
+| Guide | Purpose |
+|-------|---------|
+| [PRIVATE_KEY_FIX_SUMMARY.md](PRIVATE_KEY_FIX_SUMMARY.md) | Fix "Invalid Private Key" errors |
+| [PRIVATE_KEY_TROUBLESHOOTING.md](PRIVATE_KEY_TROUBLESHOOTING.md) | Detailed troubleshooting |
+| [PGEDGE_QUICK_START.md](PGEDGE_QUICK_START.md) | pgEdge Agentic AI quick start |
+| [DBEAVER_SETUP.md](DBEAVER_SETUP.md) | Connect DBeaver to database |
+| [README_DOCKER.md](README_DOCKER.md) | Docker deployment guide |
+
 ## Project Structure
 
 ```

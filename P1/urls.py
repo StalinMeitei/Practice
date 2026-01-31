@@ -16,8 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+import sys
+sys.path.insert(0, '/app')
+from api_views import get_partners, get_keys, get_messages, get_stats
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('pyas2/', include('pyas2.urls')),
+    path('api/partners/', get_partners, name='api_partners'),
+    path('api/keys/', get_keys, name='api_keys'),
+    path('api/messages/', get_messages, name='api_messages'),
+    path('api/stats/', get_stats, name='api_stats'),
 ]
