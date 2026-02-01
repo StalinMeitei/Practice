@@ -167,6 +167,153 @@ def get_messages(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@require_http_methods(["GET"])
+def get_message_detail(request, message_id):
+    """Get message details including payload"""
+    try:
+        message = Message.objects.get(id=message_id)
+        
+        # Read payload content
+        payload_content = ''
+        if message.payload:
+            try:
+                # message.payload is a FileField, need to read the file
+                if hasattr(message.payload, 'path') and os.path.exists(message.payload.path):
+                    with open(message.payload.path, 'rb') as f:
+                        payload_bytes = f.read()
+                        payload_content = payload_bytes.decode('utf-8', errors='replace')
+                elif hasattr(message.payload, 'read'):
+                    try:
+                        message.payload.open('rb')
+                        payload_bytes = message.payload.read()
+                        message.payload.close()
+                        payload_content = payload_bytes.decode('utf-8', errors='replace')
+                    except:
+                        payload_content = '[Unable to read file content]'
+                else:
+                    payload_content = str(message.payload)
+            except Exception as e:
+                payload_content = f'[Error reading payload: {str(e)}]'
+        else:
+            payload_content = '[No payload available]'
+        
+        data = {
+            'id': message.id,
+            'message_id': message.message_id,
+            'direction': 'Outbound' if message.direction == 'OUT' else 'Inbound',
+            'partner': message.partner.as2_name if message.partner else 'Unknown',
+            'status': 'Success' if message.status == 'S' else 'Pending' if message.status == 'P' else 'Failed',
+            'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'size': f'{len(payload_content) / 1024:.2f} KB' if payload_content else '0 KB',
+            'payload': payload_content,
+            'filename': message.filename if hasattr(message, 'filename') and message.filename else 'N/A',
+            'content_type': message.content_type if hasattr(message, 'content_type') and message.content_type else 'text/plain',
+        }
+        
+        return JsonResponse(data)
+    except Message.DoesNotExist:
+        return JsonResponse({'error': 'Message not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def retry_message(request, message_id):
+    """Retry sending a failed message"""
+    try:
+        message = Message.objects.get(id=message_id)
+        
+        # Check if message is failed or pending
+        if message.status not in ['E', 'P']:
+            return JsonResponse({
+                'error': 'Only failed or pending messages can be retried'
+            }, status=400)
+        
+        # Check if it's an outbound message
+        if message.direction != 'OUT':
+            return JsonResponse({
+                'error': 'Only outbound messages can be retried'
+            }, status=400)
+        
+        # Get the payload content
+        payload_content = None
+        if message.payload:
+            try:
+                if hasattr(message.payload, 'path') and os.path.exists(message.payload.path):
+                    with open(message.payload.path, 'rb') as f:
+                        payload_content = f.read()
+                elif hasattr(message.payload, 'read'):
+                    message.payload.open('rb')
+                    payload_content = message.payload.read()
+                    message.payload.close()
+            except Exception as e:
+                return JsonResponse({
+                    'error': f'Failed to read message payload: {str(e)}'
+                }, status=500)
+        
+        if not payload_content:
+            return JsonResponse({
+                'error': 'Message payload not found'
+            }, status=404)
+        
+        # Create a new message for retry
+        from pyas2 import as2lib
+        
+        new_message = Message.objects.create(
+            message_id=as2lib.make_mime_message_id(),
+            partner=message.partner,
+            organization=message.organization,
+            direction='OUT',
+            status='P',  # Pending
+            payload=payload_content,
+            filename=message.filename if hasattr(message, 'filename') else None
+        )
+        
+        # Try to send using management command
+        try:
+            from django.core.management import call_command
+            
+            # Save payload to temp file
+            with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.dat') as tmp_file:
+                tmp_file.write(payload_content)
+                tmp_file_path = tmp_file.name
+            
+            try:
+                # Send using management command
+                call_command('sendas2message',
+                           message.organization.as2_name,
+                           message.partner.as2_name,
+                           tmp_file_path,
+                           delete=True)
+                
+                new_message.status = 'S'  # Success
+                new_message.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Message retried successfully',
+                    'new_message_id': new_message.message_id,
+                    'original_message_id': message.message_id
+                })
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_file_path):
+                    os.unlink(tmp_file_path)
+                    
+        except Exception as e:
+            new_message.status = 'E'  # Error
+            new_message.save()
+            return JsonResponse({
+                'error': f'Failed to retry message: {str(e)}'
+            }, status=500)
+            
+    except Message.DoesNotExist:
+        return JsonResponse({'error': 'Message not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 @require_http_methods(["GET"])
 def get_stats(request):
     """Get dashboard statistics"""

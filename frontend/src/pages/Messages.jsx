@@ -15,6 +15,14 @@ import {
   InputAdornment,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Grid,
+  Divider,
+  CircularProgress,
 } from '@mui/material'
 import {
   Visibility as VisibilityIcon,
@@ -22,12 +30,19 @@ import {
   CheckCircle,
   Error,
   Schedule,
+  Close as CloseIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material'
+import axios from 'axios'
 
 export default function Messages() {
   const [messages, setMessages] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [tabValue, setTabValue] = useState(0)
+  const [openDialog, setOpenDialog] = useState(false)
+  const [selectedMessage, setSelectedMessage] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     fetchMessages()
@@ -35,57 +50,70 @@ export default function Messages() {
 
   const fetchMessages = async () => {
     try {
-      // Mock data - replace with actual API call
+      const response = await axios.get('/api/messages/')
+      setMessages(response.data.messages || [])
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+      // Use mock data as fallback
       const mockMessages = [
         {
           id: 1,
           message_id: 'MSG-2026-001',
-          direction: 'outbound',
+          direction: 'OUT',
           partner: 'P2',
           status: 'success',
           timestamp: '2026-01-31 10:30:00',
-          size: '2.5 MB',
-        },
-        {
-          id: 2,
-          message_id: 'MSG-2026-002',
-          direction: 'inbound',
-          partner: 'P1',
-          status: 'success',
-          timestamp: '2026-01-31 10:25:00',
-          size: '1.8 MB',
-        },
-        {
-          id: 3,
-          message_id: 'MSG-2026-003',
-          direction: 'outbound',
-          partner: 'Partner A',
-          status: 'pending',
-          timestamp: '2026-01-31 10:20:00',
-          size: '3.2 MB',
-        },
-        {
-          id: 4,
-          message_id: 'MSG-2026-004',
-          direction: 'inbound',
-          partner: 'Partner B',
-          status: 'failed',
-          timestamp: '2026-01-31 10:15:00',
-          size: '1.2 MB',
-        },
-        {
-          id: 5,
-          message_id: 'MSG-2026-005',
-          direction: 'outbound',
-          partner: 'P2',
-          status: 'success',
-          timestamp: '2026-01-31 10:10:00',
-          size: '4.1 MB',
+          size: '2.5 KB',
         },
       ]
       setMessages(mockMessages)
+    }
+  }
+
+  const handleViewMessage = async (messageId) => {
+    setLoadingDetail(true)
+    setOpenDialog(true)
+    
+    try {
+      const response = await axios.get(`/api/messages/${messageId}/`)
+      setSelectedMessage(response.data)
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      console.error('Error fetching message details:', error)
+      setSelectedMessage({
+        error: 'Failed to load message details'
+      })
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false)
+    setSelectedMessage(null)
+  }
+
+  const handleRetryMessage = async (messageId) => {
+    if (!window.confirm('Are you sure you want to retry this message?')) {
+      return
+    }
+    
+    setRetrying(true)
+    try {
+      const response = await axios.post(`/api/messages/${messageId}/retry/`)
+      
+      if (response.data.success) {
+        alert('Message retried successfully!')
+        // Refresh messages list
+        fetchMessages()
+        handleCloseDialog()
+      } else {
+        alert(`Failed to retry message: ${response.data.error}`)
+      }
+    } catch (error) {
+      console.error('Error retrying message:', error)
+      alert(`Error retrying message: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -101,9 +129,9 @@ export default function Messages() {
     )
 
     if (tabValue === 1) {
-      filtered = filtered.filter((msg) => msg.direction === 'inbound')
+      filtered = filtered.filter((msg) => msg.direction === 'IN')
     } else if (tabValue === 2) {
-      filtered = filtered.filter((msg) => msg.direction === 'outbound')
+      filtered = filtered.filter((msg) => msg.direction === 'OUT')
     }
 
     return filtered
@@ -136,7 +164,11 @@ export default function Messages() {
   }
 
   const getDirectionColor = (direction) => {
-    return direction === 'inbound' ? '#10B981' : '#5048E5'
+    return direction === 'IN' ? '#10B981' : '#5048E5'
+  }
+
+  const getDirectionLabel = (direction) => {
+    return direction === 'IN' ? 'Inbound' : 'Outbound'
   }
 
   const filteredMessages = getFilteredMessages()
@@ -198,7 +230,7 @@ export default function Messages() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={message.direction}
+                      label={getDirectionLabel(message.direction)}
                       size="small"
                       sx={{
                         bgcolor: getDirectionColor(message.direction),
@@ -229,9 +261,24 @@ export default function Messages() {
                     <Typography variant="body2">{message.size}</Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" color="primary">
+                    <IconButton 
+                      size="small" 
+                      color="primary"
+                      onClick={() => handleViewMessage(message.id)}
+                      title="View message details"
+                    >
                       <VisibilityIcon fontSize="small" />
                     </IconButton>
+                    {message.status === 'failed' && message.direction === 'OUT' && (
+                      <IconButton 
+                        size="small" 
+                        color="warning"
+                        onClick={() => handleRetryMessage(message.id)}
+                        title="Retry failed message"
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -245,6 +292,143 @@ export default function Messages() {
           </Box>
         )}
       </Paper>
+
+      {/* Message Detail Dialog */}
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Message Details</Typography>
+          <IconButton onClick={handleCloseDialog} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingDetail ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : selectedMessage && !selectedMessage.error ? (
+            <Box>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Message ID
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                    {selectedMessage.message_id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Direction
+                  </Typography>
+                  <Typography variant="body2">
+                    <Chip
+                      label={selectedMessage.direction}
+                      size="small"
+                      sx={{
+                        bgcolor: selectedMessage.direction === 'Inbound' ? '#10B981' : '#5048E5',
+                        color: 'white',
+                        fontWeight: 500,
+                      }}
+                    />
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Partner
+                  </Typography>
+                  <Typography variant="body2">{selectedMessage.partner}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Status
+                  </Typography>
+                  <Typography variant="body2">
+                    <Chip
+                      label={selectedMessage.status}
+                      size="small"
+                      color={
+                        selectedMessage.status === 'Success' ? 'success' :
+                        selectedMessage.status === 'Pending' ? 'warning' : 'error'
+                      }
+                    />
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Timestamp
+                  </Typography>
+                  <Typography variant="body2">{selectedMessage.timestamp}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Size
+                  </Typography>
+                  <Typography variant="body2">{selectedMessage.size}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Filename
+                  </Typography>
+                  <Typography variant="body2">{selectedMessage.filename}</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="textSecondary">
+                    Content Type
+                  </Typography>
+                  <Typography variant="body2">{selectedMessage.content_type}</Typography>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Payload Content
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  bgcolor: '#f5f5f5',
+                  maxHeight: 400,
+                  overflow: 'auto',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {selectedMessage.payload || '[No payload content]'}
+              </Paper>
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography color="error">
+                {selectedMessage?.error || 'Failed to load message details'}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {selectedMessage && selectedMessage.status === 'Failed' && selectedMessage.direction === 'Outbound' && (
+            <Button 
+              onClick={() => handleRetryMessage(selectedMessage.id)}
+              color="warning"
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              disabled={retrying}
+            >
+              {retrying ? 'Retrying...' : 'Retry Message'}
+            </Button>
+          )}
+          <Button onClick={handleCloseDialog}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

@@ -1,7 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Integration Test: Send AS2 Messages to Server
 This script should be run ON the server (192.168.1.200) to send real AS2 messages
+Can be run either:
+1. Inside Docker container: docker exec -it p1-as2 python3 /app/unittest/test_send_messages_to_server.py
+2. On host with proper Django setup
 """
 import os
 import sys
@@ -9,10 +12,20 @@ import django
 from pathlib import Path
 from datetime import datetime
 import time
+import tempfile
+
+# Add parent directory to path for Docker environment
+sys.path.insert(0, '/app')
 
 def setup_django():
     """Setup Django for P1"""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'P1.settings')
+    # Check if we're in Docker
+    if os.path.exists('/app/P1/settings.py'):
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+        os.chdir('/app/P1')
+    else:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'P1.settings')
+    
     django.setup()
 
 def create_test_file(index):
@@ -32,14 +45,12 @@ Test Details:
 - Purpose: Verify message count increases in Admin/UI
 """
     
-    # Create test file in P1's data directory
-    test_file_path = Path(f'P1/data/test_message_{timestamp}_{index}.txt')
-    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # Create temporary file (works in Docker and host)
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp_file:
+        tmp_file.write(test_content)
+        tmp_file_path = tmp_file.name
     
-    with open(test_file_path, 'w') as f:
-        f.write(test_content)
-    
-    return test_file_path
+    return Path(tmp_file_path)
 
 def get_message_count():
     """Get current message count from database"""
@@ -107,6 +118,13 @@ def send_test_messages(count=5):
         except Exception as e:
             print(f"  ✗ Message {i} failed: {e}")
             failed_count += 1
+        finally:
+            # Clean up temp file if it still exists
+            if test_file.exists():
+                try:
+                    test_file.unlink()
+                except:
+                    pass
     
     print("\n" + "-" * 70)
     print(f"Results: {success_count} succeeded, {failed_count} failed")
@@ -147,15 +165,9 @@ def main():
         print("✓ Django environment initialized")
     except Exception as e:
         print(f"✗ Failed to initialize Django: {e}")
-        print("\nMake sure you're running this script from the paomi-as2 directory")
-        return False
-    
-    # Check if we're in the right directory
-    if not Path('P1/settings.py').exists():
-        print("\n✗ Error: P1/settings.py not found")
-        print("Please run this script from the paomi-as2 directory:")
-        print("  cd /path/to/paomi-as2")
-        print("  python test_send_messages_to_server.py")
+        print("\nMake sure you're running this script:")
+        print("  - Inside Docker: docker exec -it p1-as2 python3 /app/unittest/test_send_messages_to_server.py")
+        print("  - Or from project root: cd /path/to/paomi-as2 && python unittest/test_send_messages_to_server.py")
         return False
     
     # Send test messages

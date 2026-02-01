@@ -20,7 +20,7 @@ import sys
 sys.path.insert(0, '/app')
 from api_views import (get_partners, get_keys, get_messages, get_stats, 
                        register, user_login, get_chart_data, get_heatmap_data,
-                       send_as2_message)
+                       send_as2_message, get_message_detail, retry_message)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +30,8 @@ urlpatterns = [
     path('api/partners/', get_partners, name='api_partners'),
     path('api/keys/', get_keys, name='api_keys'),
     path('api/messages/', get_messages, name='api_messages'),
+    path('api/messages/<int:message_id>/', get_message_detail, name='api_message_detail'),
+    path('api/messages/<int:message_id>/retry/', retry_message, name='api_retry_message'),
     path('api/stats/', get_stats, name='api_stats'),
     path('api/chart-data/', get_chart_data, name='api_chart_data'),
     path('api/heatmap-data/', get_heatmap_data, name='api_heatmap_data'),
