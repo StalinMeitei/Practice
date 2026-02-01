@@ -18,13 +18,20 @@ from django.contrib import admin
 from django.urls import path, include
 import sys
 sys.path.insert(0, '/app')
-from api_views import get_partners, get_keys, get_messages, get_stats
+from api_views import (get_partners, get_keys, get_messages, get_stats, 
+                       register, user_login, get_chart_data, get_heatmap_data,
+                       send_as2_message)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('pyas2/', include('pyas2.urls')),
+    path('api/auth/register/', register, name='api_register'),
+    path('api/auth/login/', user_login, name='api_login'),
     path('api/partners/', get_partners, name='api_partners'),
     path('api/keys/', get_keys, name='api_keys'),
     path('api/messages/', get_messages, name='api_messages'),
     path('api/stats/', get_stats, name='api_stats'),
+    path('api/chart-data/', get_chart_data, name='api_chart_data'),
+    path('api/heatmap-data/', get_heatmap_data, name='api_heatmap_data'),
+    path('api/send-message/', send_as2_message, name='api_send_message'),
 ]

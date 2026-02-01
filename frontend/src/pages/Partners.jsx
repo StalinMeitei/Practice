@@ -102,23 +102,25 @@ export default function Partners() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
           Partners
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
+          size="small"
           sx={{ textTransform: 'none' }}
         >
           Add Partner
         </Button>
       </Box>
 
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ mb: 3 }}>
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ mb: 2 }}>
           <TextField
             fullWidth
+            size="small"
             placeholder="Search partners..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -133,14 +135,13 @@ export default function Partners() {
         </Box>
 
         <TableContainer>
-          <Table>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Partner</TableCell>
                 <TableCell>AS2 Name</TableCell>
                 <TableCell>Target URL</TableCell>
                 <TableCell>Encryption</TableCell>
-                <TableCell>Signature</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -149,8 +150,8 @@ export default function Partners() {
               {filteredPartners.map((partner) => (
                 <TableRow key={partner.id} hover>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: '#5048E5' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Avatar sx={{ bgcolor: '#5048E5', width: 32, height: 32, fontSize: 14 }}>
                         {getInitials(partner.name)}
                       </Avatar>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -162,19 +163,16 @@ export default function Partners() {
                     <Chip
                       label={partner.as2_name}
                       size="small"
-                      sx={{ fontWeight: 500 }}
+                      sx={{ fontWeight: 500, height: 24, fontSize: 12 }}
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="textSecondary" sx={{ fontSize: 12 }}>
                       {partner.target_url}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{partner.encryption}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{partner.signature}</Typography>
+                    <Typography variant="body2" sx={{ fontSize: 12 }}>{partner.encryption}</Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
@@ -182,6 +180,7 @@ export default function Partners() {
                       color={getStatusColor(partner.status)}
                       size="small"
                       icon={partner.status === 'active' ? <CheckCircle /> : <Cancel />}
+                      sx={{ height: 24, fontSize: 11 }}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -199,8 +198,8 @@ export default function Partners() {
         </TableContainer>
 
         {filteredPartners.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography color="textSecondary">No partners found</Typography>
+          <Box sx={{ textAlign: 'center', py: 3 }}>
+            <Typography color="textSecondary" variant="body2">No partners found</Typography>
           </Box>
         )}
       </Paper>

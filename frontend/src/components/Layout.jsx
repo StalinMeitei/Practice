@@ -14,7 +14,8 @@ import {
   ListItemIcon,
   ListItemText,
   Avatar,
-  Badge,
+  Menu,
+  MenuItem,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
@@ -22,11 +23,11 @@ import {
   People as PeopleIcon,
   VpnKey as VpnKeyIcon,
   Message as MessageIcon,
-  Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material'
 
-const drawerWidth = 280
+const drawerWidth = 240
 
 const menuItems = [
   { text: 'Overview', icon: <DashboardIcon />, path: '/' },
@@ -37,21 +38,38 @@ const menuItems = [
 
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [anchorEl, setAnchorEl] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
 
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
   const drawer = (
     <Box sx={{ height: '100%', bgcolor: '#1E293B', color: 'white' }}>
-      <Toolbar sx={{ px: 3, py: 2 }}>
+      <Toolbar sx={{ px: 2, py: 1.5, minHeight: '56px !important' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
+              width: 32,
+              height: 32,
               bgcolor: '#5048E5',
               borderRadius: 1,
               display: 'flex',
@@ -59,17 +77,17 @@ export default function Layout({ children }) {
               justifyContent: 'center',
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
               AS2
             </Typography>
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>
             Dashboard
           </Typography>
         </Box>
       </Toolbar>
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-      <List sx={{ px: 2, py: 2 }}>
+      <List sx={{ px: 1.5, py: 1 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
@@ -77,6 +95,8 @@ export default function Layout({ children }) {
               selected={location.pathname === item.path}
               sx={{
                 borderRadius: 1,
+                py: 1,
+                minHeight: 40,
                 '&.Mui-selected': {
                   bgcolor: 'rgba(80, 72, 229, 0.2)',
                   '&:hover': {
@@ -88,31 +108,16 @@ export default function Layout({ children }) {
                 },
               }}
             >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText 
+                primary={item.text}
+                primaryTypographyProps={{ fontSize: 14 }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
-      </List>
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 2 }} />
-      <List sx={{ px: 2 }}>
-        <ListItem disablePadding>
-          <ListItemButton
-            sx={{
-              borderRadius: 1,
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.05)',
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Settings" />
-          </ListItemButton>
-        </ListItem>
       </List>
     </Box>
   )
@@ -126,10 +131,10 @@ export default function Layout({ children }) {
           ml: { sm: `${drawerWidth}px` },
           bgcolor: 'white',
           color: 'text.primary',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: '56px !important', py: 0.5 }}>
           <IconButton
             color="inherit"
             edge="start"
@@ -139,14 +144,28 @@ export default function Layout({ children }) {
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <IconButton color="inherit">
-            <Badge badgeContent={4} color="error">
-              <NotificationsIcon />
-            </Badge>
+          <IconButton onClick={handleMenu}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: '#5048E5', fontSize: 14 }}>
+              {user.username?.charAt(0).toUpperCase() || 'U'}
+            </Avatar>
           </IconButton>
-          <IconButton sx={{ ml: 1 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: '#5048E5' }}>A</Avatar>
-          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          >
+            <MenuItem disabled>
+              <PersonIcon sx={{ mr: 1, fontSize: 20 }} />
+              {user.username || 'User'}
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={handleLogout}>
+              <LogoutIcon sx={{ mr: 1, fontSize: 20 }} />
+              Logout
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
       <Box
@@ -180,9 +199,9 @@ export default function Layout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: 2,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
+          mt: 7,
         }}
       >
         {children}
