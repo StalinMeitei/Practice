@@ -9,7 +9,7 @@ on:
 jobs:
   lint:
     name: Lint Code Base
-    runs-on: microsoft window
+    runs-on: microsoft-window
 
     steps:
       - name: Checkout Code
